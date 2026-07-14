@@ -1990,13 +1990,19 @@ async function forwardataTCP(host, portNum, rawData, ws, respHeader, remoteConnW
 	}
 
 	async function 打开TCP连接(address, port) {
-		const remoteSock = TCP连接({ hostname: address, port });
-		try {
-			await 等待连接建立(remoteSock);
-			return remoteSock;
-		} catch (err) {
-			try { remoteSock?.close?.() } catch (e) { }
-			throw err;
+ 	if (ctx代理全局 && ctx反代IP) {
+		log(`[全局PROXYIP] ${address}:${port} -> ${ctx反代IP}:443`);
+		const remoteSock = TCP连接({ hostname: ctx反代IP, port: 443 });
+		await 等待连接建立(remoteSock);
+		return remoteSock;
+	}
+	const remoteSock = TCP连接({ hostname: address, port });
+	try {
+		await 等待连接建立(remoteSock);
+		return remoteSock;
+	} catch (err) {	
+	    try { remoteSock?.close?.() } catch (e) { }
+		throw err;
 		}
 	}
 
@@ -2031,6 +2037,7 @@ async function forwardataTCP(host, portNum, rawData, ws, respHeader, remoteConnW
 	}
 
 	async function 构建预加载竞速候选列表(address, port) {
+		if (ctx代理全局 && ctx反代IP) return null;
 		if (!预加载竞速拨号 || isIPHostname(address)) return null;
 		log(`[TCP直连] 预加载竞速拨号开启，开始并发查询 ${address} 的 A/AAAA 记录`);
 		const [aRecords, aaaaRecords] = await Promise.all([
@@ -5643,8 +5650,8 @@ async function 反代参数获取(url, uuid, 默认反代IP = '', 默认反代�
 	const { searchParams } = url;
 	const pathname = decodeURIComponent(url.pathname);
 	const pathLower = pathname.toLowerCase();
-	let 反代IP = 默认反代IP, 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = false, 我的SOCKS5账号 = '', parsedSocks5Address = {}, 启用反代兜底 = 默认反代兜底;
-	const 反代上下文 = { 木马反代地址: null, 反代IP, 代理类型: null, 代理账号: '', 代理全局: false, 代理参数: {}, 反代兜底: 启用反代兜底 };
+	let 反代IP = 默认反代IP, 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = true, 我的SOCKS5账号 = '', parsedSocks5Address = {}, 启用反代兜底 = 默认反代兜底;
+	const 反代上下文 = { 木马反代地址: null, 反代IP, 代理类型: null, 代理账号: '', 代理全局: true, 代理参数: {}, 反代兜底: 启用反代兜底 };
 	const 保存快照 = () => {
 		反代上下文.反代IP = 反代IP;
 		反代上下文.代理类型 = 启用SOCKS5反代;
