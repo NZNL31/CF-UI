@@ -5648,149 +5648,168 @@ async function 请求优选API(urls, 默认端口 = '443', 超时时间 = 3000) 
 }
 
 async function 反代参数获取(url, uuid, 默认反代IP = '', 默认反代兜底 = true) {
-	console.log('[PROXYIP测试] 默认反代IP=', 默认反代IP);
-	const { searchParams } = url;
-	const pathname = decodeURIComponent(url.pathname);
-	const pathLower = pathname.toLowerCase();
-	let 反代IP = 默认反代IP, 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = true, 我的SOCKS5账号 = '', parsedSocks5Address = {}, 启用反代兜底 = 默认反代兜底;
-	const 反代上下文 = { 木马反代地址: null, 反代IP, 代理类型: null, 代理账号: '', 代理全局: true, 代理参数: {}, 反代兜底: 启用反代兜底 };
-	const 保存快照 = () => {
-		反代上下文.反代IP = 反代IP;
-		反代上下文.代理类型 = 启用SOCKS5反代;
-		反代上下文.代理账号 = 我的SOCKS5账号;
-		反代上下文.代理全局 = 启用SOCKS5全局反代;
-		反代上下文.代理参数 = { ...parsedSocks5Address };
-		反代上下文.反代兜底 = 启用反代兜底;
-	};
+    console.log('[PROXYIP测试] 默认反代IP=', 默认反代IP);
+    const { searchParams } = url;
+    const pathname = decodeURIComponent(url.pathname);
+    const pathLower = pathname.toLowerCase();
+    let 反代IP = 默认反代IP;
+    let 启用SOCKS5反代 = null;
+    let 启用SOCKS5全局反代 = true;
+    let 我的SOCKS5账号 = '';
+    let parsedSocks5Address = {};
+    let 启用反代兜底 = 默认反代兜底;
 
-	const 链式代理路径匹配 = pathname.match(/\/video\/(.+)$/i);
-	if (链式代理路径匹配) {
-		try {
-			const 链式代理明文 = base64SecretDecode(链式代理路径匹配[1], uuid);
-			const { type, ...链式代理地址 } = JSON.parse(链式代理明文);
-			if (!type || !反代协议默认端口[String(type).toLowerCase()]) throw new Error('链式代理类型无效');
-			if (!链式代理地址.hostname || !链式代理地址.port) throw new Error('链式代理地址缺少 hostname 或 port');
-			我的SOCKS5账号 = '';
-			反代IP = '链式代理';
-			启用反代兜底 = false;
-			启用SOCKS5全局反代 = true;
-			启用SOCKS5反代 = String(type).toLowerCase();
-			parsedSocks5Address = {
-				username: 链式代理地址.username,
-				password: 链式代理地址.password,
-				hostname: 链式代理地址.hostname,
-				port: Number(链式代理地址.port)
-			};
-			if (isNaN(parsedSocks5Address.port)) throw new Error('链式代理端口无效');
-			保存快照();
-			return 反代上下文;
-		} catch (err) {
-			console.error('解析链式代理参数失败:', err.message);
-		}
-	}
+    const 反代上下文 = {
+        木马反代地址: null,
+        反代IP,
+        代理类型: null,
+        代理账号: '',
+        代理全局: true,
+        代理参数: {},
+        反代兜底: 启用反代兜底
+    };
 
-	我的SOCKS5账号 = searchParams.get('socks5') || searchParams.get('http') || searchParams.get('https') || searchParams.get('turn') || searchParams.get('sstp') || null;
-	启用SOCKS5全局反代 = searchParams.has('globalproxy') || true;
-	if (searchParams.get('socks5')) 启用SOCKS5反代 = 'socks5';
-	else if (searchParams.get('http')) 启用SOCKS5反代 = 'http';
-	else if (searchParams.get('https')) 启用SOCKS5反代 = 'https';
-	else if (searchParams.get('turn')) 启用SOCKS5反代 = 'turn';
-	else if (searchParams.get('sstp')) 启用SOCKS5反代 = 'sstp';
+    const 保存快照 = () => {
+        反代上下文.反代IP = 反代IP;
+        反代上下文.代理类型 = 启用SOCKS5反代;
+        反代上下文.代理账号 = 我的SOCKS5账号;
+        反代上下文.代理全局 = 启用SOCKS5全局反代;
+        反代上下文.代理参数 = { ...parsedSocks5Address };
+        反代上下文.反代兜底 = 启用反代兜底;
+    };
 
-	const 解析代理URL = (值, 强制全局 = true) => {
-		const 匹配 = /^(socks5|http|https|turn|sstp):\/\/(.+)$/i.exec(值 || '');
-		if (!匹配) return false;
-		启用SOCKS5反代 = 匹配[1].toLowerCase();
-		我的SOCKS5账号 = 匹配[2].split('/')[0];
-		if (强制全局) 启用SOCKS5全局反代 = true;
-		return true;
-	};
-
-	const 设置反代IP = (值) => {
-		反代IP = 值;
-		 // 启用SOCKS5反代 = null;  // 注释掉或删除
-		启用反代兜底 = false;
-	};
-
-	const 提取路径值 = (值) => {
-		if (!值.includes('://')) {
-			const 斜杠索引 = 值.indexOf('/');
-			return 斜杠索引 > 0 ? 值.slice(0, 斜杠索引) : 值;
-		}
-		const 协议拆分 = 值.split('://');
-		if (协议拆分.length !== 2) return 值;
-		const 斜杠索引 = 协议拆分[1].indexOf('/');
-		return 斜杠索引 > 0 ? `${协议拆分[0]}://${协议拆分[1].slice(0, 斜杠索引)}` : 值;
-	};
-
-	const 木马路径匹配 = /\/trojan=([^?#\s]+)/i.exec(pathname);
-	if (木马路径匹配) {
-		try {
-			反代上下文.木马反代地址 = 解析木马反代地址(木马路径匹配[1]);
-		} catch (err) {
-			console.error('解析木马反代地址失败:', err.message);
-			反代上下文.木马反代地址 = null;
-		}
-	}
-
-	const 查询反代IP = searchParams.get('proxyip');
-	if (查询反代IP !== null) {
-		if (!解析代理URL(查询反代IP)) {
-			设置反代IP(查询反代IP);
-			// 不直接返回，继续执行，让后续的自动代理逻辑生效
-		}
-	} else {
-		let 匹配 = /\/(socks5?|http|https|turn|sstp):\/?\/?([^/?#\s]+)/i.exec(pathname);
-		if (匹配) {
-			const 类型 = 匹配[1].toLowerCase();
-			启用SOCKS5反代 = 类型 === 'sock' || 类型 === 'socks' ? 'socks5' : 类型;
-			我的SOCKS5账号 = 匹配[2].split('/')[0];
-			启用SOCKS5全局反代 = true;
-		} else if ((匹配 = /\/(g?s5|socks5|g?http|g?https|g?turn|g?sstp)=([^/?#\s]+)/i.exec(pathname))) {
-			const 类型 = 匹配[1].toLowerCase();
-			我的SOCKS5账号 = 匹配[2].split('/')[0];
-			启用SOCKS5反代 = 类型.includes('sstp') ? 'sstp' : (类型.includes('turn') ? 'turn' : (类型.includes('https') ? 'https' : (类型.includes('http') ? 'http' : 'socks5')));
-			if (类型.startsWith('g')) 启用SOCKS5全局反代 = true;
-		} else if ((匹配 = /\/(proxyip[.=]|pyip=|ip=)([^?#\s]+)/.exec(pathLower))) {
-			const 路径反代值 = 提取路径值(匹配[2]);
-			if (!解析代理URL(路径反代值)) {
-				设置反代IP(路径反代值);
-				// 保存快照();   // 删除或注释掉
-        // return 反代上下文;   // 删除，让函数继续执行
-			}
-		}
-	}
-
-	if (!我的SOCKS5账号) {
-		启用SOCKS5反代 = null;
-		保存快照();
-		return 反代上下文;
-	}
-
-	try {
-		parsedSocks5Address = await 获取SOCKS5账号(我的SOCKS5账号, 获取代理默认端口(启用SOCKS5反代));
-		        // ... 其他逻辑 ...
-    } catch (err) {
-        console.error('解析SOCKS5地址失败:', err.message);
-        启用SOCKS5反代 = null;
+    // 1. 链式代理（/video/ 路径）
+    const 链式代理路径匹配 = pathname.match(/\/video\/(.+)$/i);
+    if (链式代理路径匹配) {
+        try {
+            const 链式代理明文 = base64SecretDecode(链式代理路径匹配[1], uuid);
+            const { type, ...链式代理地址 } = JSON.parse(链式代理明文);
+            if (!type || !反代协议默认端口[String(type).toLowerCase()]) throw new Error('链式代理类型无效');
+            if (!链式代理地址.hostname || !链式代理地址.port) throw new Error('链式代理地址缺少 hostname 或 port');
+            我的SOCKS5账号 = '';
+            反代IP = '链式代理';
+            启用反代兜底 = false;
+            启用SOCKS5全局反代 = true;
+            启用SOCKS5反代 = String(type).toLowerCase();
+            parsedSocks5Address = {
+                username: 链式代理地址.username,
+                password: 链式代理地址.password,
+                hostname: 链式代理地址.hostname,
+                port: Number(链式代理地址.port)
+            };
+            if (isNaN(parsedSocks5Address.port)) throw new Error('链式代理端口无效');
+            保存快照();
+            return 反代上下文;
+        } catch (err) {
+            console.error('解析链式代理参数失败:', err.message);
+        }
     }
-		if (searchParams.get('socks5')) 启用SOCKS5反代 = 'socks5';
-		else if (searchParams.get('http')) 启用SOCKS5反代 = 'http';
-		else if (searchParams.get('https')) 启用SOCKS5反代 = 'https';
-		else if (searchParams.get('turn')) 启用SOCKS5反代 = 'turn';
-		else if (searchParams.get('sstp')) 启用SOCKS5反代 = 'sstp';
-		else 启用SOCKS5反代 = 启用SOCKS5反代 || 'socks5';
-	} catch (err) {
-		console.error('解析SOCKS5地址失败:', err.message);
-		启用SOCKS5反代 = null;
-	}
-	保存快照();	// 如果反代IP已设置（来自环境变量 PROXYIP 或参数 proxyip），且没有其他代理类型，则自动启用 proxyip 代理模式
-	// 这样所有请求都会先走 PROXYIP，跳过直连
-	if (反代IP && 反代IP !== 'auto' && !启用SOCKS5反代) {
-		启用SOCKS5反代 = 'proxyip';
-		启用SOCKS5全局反代 = true;
-	}
-	return 反代上下文;
+
+    // 2. 从查询参数获取 socks5/http/https/turn/sstp
+    我的SOCKS5账号 = searchParams.get('socks5') || searchParams.get('http') || searchParams.get('https') || searchParams.get('turn') || searchParams.get('sstp') || null;
+    启用SOCKS5全局反代 = searchParams.has('globalproxy') || true;
+    if (searchParams.get('socks5')) 启用SOCKS5反代 = 'socks5';
+    else if (searchParams.get('http')) 启用SOCKS5反代 = 'http';
+    else if (searchParams.get('https')) 启用SOCKS5反代 = 'https';
+    else if (searchParams.get('turn')) 启用SOCKS5反代 = 'turn';
+    else if (searchParams.get('sstp')) 启用SOCKS5反代 = 'sstp';
+
+    // 3. 解析代理URL辅助函数
+    const 解析代理URL = (值, 强制全局 = true) => {
+        const 匹配 = /^(socks5|http|https|turn|sstp):\/\/(.+)$/i.exec(值 || '');
+        if (!匹配) return false;
+        启用SOCKS5反代 = 匹配[1].toLowerCase();
+        我的SOCKS5账号 = 匹配[2].split('/')[0];
+        if (强制全局) 启用SOCKS5全局反代 = true;
+        return true;
+    };
+
+    // 4. 设置反代IP（不再清空代理类型）
+    const 设置反代IP = (值) => {
+        反代IP = 值;
+        // 启用SOCKS5反代 = null;   // 注释掉，保留代理类型
+        启用反代兜底 = false;
+    };
+
+    const 提取路径值 = (值) => {
+        if (!值.includes('://')) {
+            const 斜杠索引 = 值.indexOf('/');
+            return 斜杠索引 > 0 ? 值.slice(0, 斜杠索引) : 值;
+        }
+        const 协议拆分 = 值.split('://');
+        if (协议拆分.length !== 2) return 值;
+        const 斜杠索引 = 协议拆分[1].indexOf('/');
+        return 斜杠索引 > 0 ? `${协议拆分[0]}://${协议拆分[1].slice(0, 斜杠索引)}` : 值;
+    };
+
+    // 5. 木马反代路径
+    const 木马路径匹配 = /\/trojan=([^?#\s]+)/i.exec(pathname);
+    if (木马路径匹配) {
+        try {
+            反代上下文.木马反代地址 = 解析木马反代地址(木马路径匹配[1]);
+        } catch (err) {
+            console.error('解析木马反代地址失败:', err.message);
+            反代上下文.木马反代地址 = null;
+        }
+    }
+
+    // 6. 处理 proxyip 参数（查询参数和路径）
+    const 查询反代IP = searchParams.get('proxyip');
+    if (查询反代IP !== null) {
+        if (!解析代理URL(查询反代IP)) {
+            设置反代IP(查询反代IP);
+            // 不 return，继续执行
+        }
+    } else {
+        let 匹配 = /\/(socks5?|http|https|turn|sstp):\/?\/?([^/?#\s]+)/i.exec(pathname);
+        if (匹配) {
+            const 类型 = 匹配[1].toLowerCase();
+            启用SOCKS5反代 = 类型 === 'sock' || 类型 === 'socks' ? 'socks5' : 类型;
+            我的SOCKS5账号 = 匹配[2].split('/')[0];
+            启用SOCKS5全局反代 = true;
+        } else if ((匹配 = /\/(g?s5|socks5|g?http|g?https|g?turn|g?sstp)=([^/?#\s]+)/i.exec(pathname))) {
+            const 类型 = 匹配[1].toLowerCase();
+            我的SOCKS5账号 = 匹配[2].split('/')[0];
+            启用SOCKS5反代 = 类型.includes('sstp') ? 'sstp' : (类型.includes('turn') ? 'turn' : (类型.includes('https') ? 'https' : (类型.includes('http') ? 'http' : 'socks5')));
+            if (类型.startsWith('g')) 启用SOCKS5全局反代 = true;
+        } else if ((匹配 = /\/(proxyip[.=]|pyip=|ip=)([^?#\s]+)/.exec(pathLower))) {
+            const 路径反代值 = 提取路径值(匹配[2]);
+            if (!解析代理URL(路径反代值)) {
+                设置反代IP(路径反代值);
+                // 不 return，继续执行
+            }
+        }
+    }
+
+    // ★★★ 关键修改：移除原来 if (!我的SOCKS5账号) 的提前返回 ★★★
+    // 不再因为无账号而提前返回，让后续逻辑统一处理
+
+    // 解析 SOCKS5 账号（如果有）
+    if (我的SOCKS5账号) {
+        try {
+            parsedSocks5Address = await 获取SOCKS5账号(我的SOCKS5账号, 获取代理默认端口(启用SOCKS5反代));
+            if (searchParams.get('socks5')) 启用SOCKS5反代 = 'socks5';
+            else if (searchParams.get('http')) 启用SOCKS5反代 = 'http';
+            else if (searchParams.get('https')) 启用SOCKS5反代 = 'https';
+            else if (searchParams.get('turn')) 启用SOCKS5反代 = 'turn';
+            else if (searchParams.get('sstp')) 启用SOCKS5反代 = 'sstp';
+            else 启用SOCKS5反代 = 启用SOCKS5反代 || 'socks5';
+        } catch (err) {
+            console.error('解析SOCKS5地址失败:', err.message);
+            启用SOCKS5反代 = null;
+        }
+    }
+
+    // ★★★ 最终强制代理：只要反代IP非空且不是'auto'，就启用 proxyip 代理模式 ★★★
+    // 同时关闭兜底，防止回退直连
+    if (反代IP && 反代IP !== 'auto') {
+        启用SOCKS5反代 = 'proxyip';
+        启用SOCKS5全局反代 = true;
+        启用反代兜底 = false;   // 重要：失败时不回退直连
+    }
+
+    保存快照();
+    return 反代上下文;
 }
 
 const 反代协议默认端口 = { socks5: 1080, http: 80, https: 443, turn: 3478, sstp: 443 };
