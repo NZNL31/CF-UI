@@ -69,10 +69,23 @@ export default {
 			}
 		} else if (管理员密码 && upgradeHeader === 'websocket') {// WebSocket代理
 			const 反代上下文 = await 反代参数获取(url, userID, 默认反代IP, 默认反代兜底);
+			// 如果环境变量配置了 PROXYIP，强制覆盖反代上下文，忽略请求参数
+            if (已配置PROXYIP) {
+                反代上下文.反代IP = 默认反代IP;
+                反代上下文.代理类型 = null;
+                反代上下文.代理全局 = false;
+                反代上下文.反代兜底 = false;
+            }
 			log(`[WebSocket] 命中请求: ${url.pathname}${url.search}`);
 			return await 处理WS请求(request, userID, url, 反代上下文);
 		} else if (管理员密码 && !访问路径.startsWith('admin/') && 访问路径 !== 'login' && request.method === 'POST') {// gRPC/XHTTP代理
 			const 反代上下文 = await 反代参数获取(url, userID, 默认反代IP, 默认反代兜底);
+		   if (已配置PROXYIP) {
+              反代上下文.反代IP = 默认反代IP;
+              反代上下文.代理类型 = null;
+              反代上下文.代理全局 = false;
+              反代上下文.反代兜底 = false;
+            }
 			const referer = request.headers.get('Referer') || '';
 			const 命中XHTTP特征 = referer.includes('x_padding', 14) || referer.includes('x_padding=');
 			if (!命中XHTTP特征 && contentType.startsWith('application/grpc')) {
