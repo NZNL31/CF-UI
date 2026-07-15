@@ -1,6 +1,4 @@
 const Version = '2026-07-11 19:02:35';
-let 已配置PROXYIP = false;
-let 全局PROXYIP值 = '';
 let config_JSON, 缓存SOCKS5白名单 = null, 调试日志打印 = false;
 let SOCKS5白名单 = ['*tapecontent.net', '*cloudatacdn.com', '*loadshare.org', '*cdn-centaurus.com', 'scholar.google.com'];
 const Pages静态页面 = 'https://edt-pages.github.io';
@@ -43,13 +41,11 @@ export default {
 		TCP并发拨号数 = Math.max(1, Number(env.TCP_CONCURRENT_DIAL) || TCP并发拨号数);
 		if (!env.TCP_CONCURRENT_DIAL && TCP并发拨号数 !== 1 && 识别运营商(request) === 'cmcc') TCP并发拨号数 = 1;
 		let 默认反代IP = (`${request.cf.colo}.${特征码字典[0]}.${特征码字典[1]}SsSs.nEt`).toLowerCase(), 默认反代兜底 = true;
-		    if (env.PROXYIP) {
-        const proxyIPs = await 整理成数组(env.PROXYIP);
-        const 选定IP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
-        已配置PROXYIP = true;
-        全局PROXYIP值 = 选定IP;
-        console.log('[全局PROXYIP] 已启用，值 =', 选定IP);
-    }
+		if (env.PROXYIP) {
+			const proxyIPs = await 整理成数组(env.PROXYIP);
+			默认反代IP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
+			默认反代兜底 = false;
+		};
 		const 访问IP = request.headers.get('CF-Connecting-IP') || request.headers.get('True-Client-IP') || request.headers.get('X-Real-IP') || request.headers.get('X-Forwarded-For') || request.headers.get('Fly-Client-IP') || request.headers.get('X-Appengine-Remote-Addr') || request.headers.get('X-Cluster-Client-IP') || '未知IP';
 		if (缓存SOCKS5白名单 === null) {
 			if (env.GO2SOCKS5) SOCKS5白名单 = [...new Set(SOCKS5白名单.concat(await 整理成数组(env.GO2SOCKS5)))];
@@ -2204,10 +2200,6 @@ async function forwardataTCP(host, portNum, rawData, ws, respHeader, remoteConnW
 			throw err;
 		}
 	} else {
-		        if (已配置PROXYIP) {
-            await connecttoPry();
-            return;
-        }
 		try {
 			log(`[TCP转发] 尝试直连到: ${host}:${portNum}`);
 			const initialSocket = await connectDirect(host, portNum, rawData, true);
@@ -5650,18 +5642,6 @@ async function 请求优选API(urls, 默认端口 = '443', 超时时间 = 3000) 
 async function 反代参数获取(url, uuid, 默认反代IP = '', 默认反代兜底 = true) {
 	const { searchParams } = url;
 	const pathname = decodeURIComponent(url.pathname);
-	    // 如果已配置全局 PROXYIP，直接忽略请求中的所有反代参数，强制使用它
-    if (已配置PROXYIP) {
-        return {
-            木马反代地址: null,
-            反代IP: 全局PROXYIP值,
-            代理类型: null,
-            代理账号: '',
-            代理全局: false,
-            代理参数: {},
-            反代兜底: false
-        };
-    }
 	const pathLower = pathname.toLowerCase();
 	let 反代IP = 默认反代IP, 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = false, 我的SOCKS5账号 = '', parsedSocks5Address = {}, 启用反代兜底 = 默认反代兜底;
 	const 反代上下文 = { 木马反代地址: null, 反代IP, 代理类型: null, 代理账号: '', 代理全局: false, 代理参数: {}, 反代兜底: 启用反代兜底 };
