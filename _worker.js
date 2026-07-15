@@ -1,3 +1,4 @@
+let 已配置PROXYIP = false;   // 新增：全局标志
 const Version = '2026-07-11 19:02:35';
 let config_JSON, 缓存SOCKS5白名单 = null, 调试日志打印 = false;
 let SOCKS5白名单 = ['*tapecontent.net', '*cloudatacdn.com', '*loadshare.org', '*cdn-centaurus.com', 'scholar.google.com'];
@@ -41,11 +42,13 @@ export default {
 		TCP并发拨号数 = Math.max(1, Number(env.TCP_CONCURRENT_DIAL) || TCP并发拨号数);
 		if (!env.TCP_CONCURRENT_DIAL && TCP并发拨号数 !== 1 && 识别运营商(request) === 'cmcc') TCP并发拨号数 = 1;
 		let 默认反代IP = (`${request.cf.colo}.${特征码字典[0]}.${特征码字典[1]}SsSs.nEt`).toLowerCase(), 默认反代兜底 = true;
-		if (env.PROXYIP) {
-			const proxyIPs = await 整理成数组(env.PROXYIP);
-			默认反代IP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
-			默认反代兜底 = false;
-		};
+        if (env.PROXYIP) {
+        const proxyIPs = await 整理成数组(env.PROXYIP);
+        默认反代IP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
+        默认反代兜底 = false;
+        已配置PROXYIP = true;   // 新增：标记 PROXYIP 可用
+        console.log('[PROXYIP全局] 已启用，值 =', env.PROXYIP);
+        };
 		const 访问IP = request.headers.get('CF-Connecting-IP') || request.headers.get('True-Client-IP') || request.headers.get('X-Real-IP') || request.headers.get('X-Forwarded-For') || request.headers.get('Fly-Client-IP') || request.headers.get('X-Appengine-Remote-Addr') || request.headers.get('X-Cluster-Client-IP') || '未知IP';
 		if (缓存SOCKS5白名单 === null) {
 			if (env.GO2SOCKS5) SOCKS5白名单 = [...new Set(SOCKS5白名单.concat(await 整理成数组(env.GO2SOCKS5)))];
