@@ -5661,31 +5661,28 @@ async function 请求优选API(urls, 默认端口 = '443', 超时时间 = 3000) 
 }
 
 async function 反代参数获取(url, uuid, 默认反代IP = '', 默认反代兜底 = true) {
+// 如果已配置全局 PROXYIP，则清理请求中可能携带的反代参数
+	if (已配置PROXYIP) {
+		const newUrl = new URL(url.toString());
+		newUrl.searchParams.delete('proxyip');
+		newUrl.searchParams.delete('socks5');
+		newUrl.searchParams.delete('http');
+		newUrl.searchParams.delete('https');
+		newUrl.searchParams.delete('turn');
+		newUrl.searchParams.delete('sstp');
+		newUrl.searchParams.delete('globalproxy');
+		let cleanPath = newUrl.pathname;
+		cleanPath = cleanPath.replace(/\/(proxyip[.=]|pyip=|ip=)[^/?#]+/i, '/');
+		cleanPath = cleanPath.replace(/\/(socks5?|http|https|turn|sstp):?\/?\/?[^/?#]+/i, '/');
+		cleanPath = cleanPath.replace(/\/(g?s5|socks5|g?http|g?https|g?turn|g?sstp)=[^/?#]+/i, '/');
+		newUrl.pathname = cleanPath;
+		url = newUrl;
+		默认反代兜底 = false;
+	}
+
 	const { searchParams } = url;
 	const pathname = decodeURIComponent(url.pathname);
 	const pathLower = pathname.toLowerCase();
-	    // 如果 Worker 环境变量指定了 PROXYIP，强制使用它，忽略请求中的任何反代参数
-if (已配置PROXYIP) {
-    const newUrl = new URL(url.toString());
-    // 删除所有可能携带反代/代理信息的查询参数
-    newUrl.searchParams.delete('proxyip');
-    newUrl.searchParams.delete('socks5');
-    newUrl.searchParams.delete('http');
-    newUrl.searchParams.delete('https');
-    newUrl.searchParams.delete('turn');
-    newUrl.searchParams.delete('sstp');
-    newUrl.searchParams.delete('globalproxy');
-    // 清理路径中的反代参数（如 /proxyip=xx、/gsocks5=xx）
-    let cleanPath = newUrl.pathname;
-    cleanPath = cleanPath.replace(/\/(proxyip[.=]|pyip=|ip=)[^/?#]+/i, '/');
-    cleanPath = cleanPath.replace(/\/(socks5?|http|https|turn|sstp):?\/?\/?[^/?#]+/i, '/');
-    cleanPath = cleanPath.replace(/\/(g?s5|socks5|g?http|g?https|g?turn|g?sstp)=[^/?#]+/i, '/');
-    newUrl.pathname = cleanPath;
-    url = newUrl;                 // 后续解析使用的是清理后的 url
-    默认反代兜底 = false;         // 禁止直连
-}
-// 保留原有 let 反代IP = ... 等代码，不要删除！
-let 反代IP = 默认反代IP, 启用SOCKS5反代 = null, ... （后续不变）
 	let 反代IP = 默认反代IP, 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = false, 我的SOCKS5账号 = '', parsedSocks5Address = {}, 启用反代兜底 = 默认反代兜底;
 	const 反代上下文 = { 木马反代地址: null, 反代IP, 代理类型: null, 代理账号: '', 代理全局: false, 代理参数: {}, 反代兜底: 启用反代兜底 };
 	const 保存快照 = () => {
