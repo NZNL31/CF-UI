@@ -48,6 +48,21 @@ export default {
 		反代并发拨号数 = Math.max(1, Number(env.PROXY_CONCURRENT_DIAL) || 反代并发拨号数);
 		TCP并发拨号数 = Math.max(1, Number(env.TCP_CONCURRENT_DIAL) || TCP并发拨号数);
 		if (!env.TCP_CONCURRENT_DIAL && TCP并发拨号数 !== 1 && 识别运营商(request) === 'cmcc') TCP并发拨号数 = 1;
+		    // 如果设置了 PROXYIP，强制全局使用该 IP，并清除请求中残留的 /proxyip 路径
+    if (env.PROXYIP) {
+        const proxyIPs = await 整理成数组(env.PROXYIP);
+        const 选定PROXYIP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
+        默认反代IP = 选定PROXYIP;
+        默认反代兜底 = false;
+        已配置PROXYIP = true;
+        全局PROXYIP值 = 选定PROXYIP;
+        const urlObj = new URL(request.url);
+        if (urlObj.pathname.includes('proxyip')) {
+            urlObj.pathname = urlObj.pathname.replace(/\/proxyip[^/]*/, '/');
+            request = new Request(urlObj.toString(), request);
+        }
+        console.log('[PROXYIP全局] 已启用，值 =', 选定PROXYIP);
+    }
 		let 默认反代IP = (`${request.cf.colo}.${特征码字典[0]}.${特征码字典[1]}SsSs.nEt`).toLowerCase(), 默认反代兜底 = true;
 		const 访问IP = request.headers.get('CF-Connecting-IP') || request.headers.get('True-Client-IP') || request.headers.get('X-Real-IP') || request.headers.get('X-Forwarded-For') || request.headers.get('Fly-Client-IP') || request.headers.get('X-Appengine-Remote-Addr') || request.headers.get('X-Cluster-Client-IP') || '未知IP';
 		if (缓存SOCKS5白名单 === null) {
