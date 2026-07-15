@@ -2200,25 +2200,20 @@ async function forwardataTCP(host, portNum, rawData, ws, respHeader, remoteConnW
 			throw err;
 		}
 	} else {
-    // 当用户指定了 PROXYIP 且关闭直连回退时，全局走反代
-    if (!ctx反代兜底) {
-        await connecttoPry();
-        return;
-    }
-    try {
-        log(`[TCP转发] 尝试直连到: ${host}:${portNum}`);
-        const initialSocket = await connectDirect(host, portNum, rawData, true);
-        remoteConnWrapper.socket = initialSocket;
-        connectStreams(initialSocket, ws, respHeader, async () => {
-            if (remoteConnWrapper.socket !== initialSocket) return;
-            await connecttoPry();
-        });
-    } catch (err) {
-        log(`[TCP转发] 直连 ${host}:${portNum} 失败: ${err.message}`);
-        if (err instanceof Error && err.name === '预加载解析为空') {
-            closeSocketQuietly(ws);
-            throw err;
-        }
+		try {
+			log(`[TCP转发] 尝试直连到: ${host}:${portNum}`);
+			const initialSocket = await connectDirect(host, portNum, rawData, true);
+			remoteConnWrapper.socket = initialSocket;
+			connectStreams(initialSocket, ws, respHeader, async () => {
+				if (remoteConnWrapper.socket !== initialSocket) return;
+				await connecttoPry();
+			});
+		} catch (err) {
+			log(`[TCP转发] 直连 ${host}:${portNum} 失败: ${err.message}`);
+			if (err instanceof Error && err.name === '预加载解析为空') {
+				closeSocketQuietly(ws);
+				throw err;
+			}
 			await connecttoPry();
 		}
 	}
