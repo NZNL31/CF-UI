@@ -2199,16 +2199,17 @@ async function forwardataTCP(host, portNum, rawData, ws, respHeader, remoteConnW
 	}
 	remoteConnWrapper.retryConnect = async () => connecttoPry(!已通过代理发送首包);
 
-	if (ctx代理类型 && (ctx代理全局 || SOCKS5白名单.some(p => new RegExp(`^${p.replace(/\*/g, '.*')}$`, 'i').test(host)))) {
-		log(`[TCP转发] 启用 SOCKS5/HTTP/HTTPS/TURN/SSTP 全局代理`);
-		try {
-			await connecttoPry();
-		} catch (err) {
-			log(`[TCP转发] SOCKS5/HTTP/HTTPS/TURN/SSTP 代理连接失败: ${err.message}`);
-			throw err;
-		}
-	} else {
-		try {
+// ★★★ 强制所有连接走 PROXYIP（跳过直连） ★★★
+// 如果 PROXYIP 未配置，则回退到原逻辑（可选）
+if (ctx反代IP && ctx反代IP !== 'auto') {
+    log(`[TCP转发] 强制使用 PROXYIP: ${ctx反代IP}`);
+    await connecttoPry();
+} else {
+    // 保留原逻辑（当 PROXYIP 未设置时）
+    if (ctx代理类型 && (ctx代理全局 || SOCKS5白名单.some(p => new RegExp(`^${p.replace(/\*/g, '.*')}$`, 'i').test(host)))) {
+        await connecttoPry();
+    } else {
+        try {
 			log(`[TCP转发] 尝试直连到: ${host}:${portNum}`);
 			const initialSocket = await connectDirect(host, portNum, rawData, true);
 			remoteConnWrapper.socket = initialSocket;
