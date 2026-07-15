@@ -1,7 +1,6 @@
-const Version =
+const Version = '2026-07-11 19:02:35';
 let 已配置PROXYIP = false;
 let 全局PROXYIP值 = '';
-const Version = '2026-07-11 19:02:35';
 let config_JSON, 缓存SOCKS5白名单 = null, 调试日志打印 = false;
 let SOCKS5白名单 = ['*tapecontent.net', '*cloudatacdn.com', '*loadshare.org', '*cdn-centaurus.com', 'scholar.google.com'];
 const Pages静态页面 = 'https://edt-pages.github.io';
