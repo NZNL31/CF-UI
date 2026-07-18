@@ -2835,50 +2835,7 @@ const shouldIgnoreTlsAlert = fragment => fragment?.[0] === ALERT_LEVEL_WARNING &
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const EMPTY_BYTES = new Uint8Array(0);
-/**
- * 分片写包装器：将每次 write 的数据切成 ≤ chunkSize 的小块再写出
- */
-function createChunkedWritable(originalWritable, chunkSize = 1400) {
-    let writer = null;
-    const ensureWriter = () => {
-        if (!writer) writer = originalWritable.getWriter();
-        return writer;
-    };
-    return new WritableStream({
-        async write(chunk) {
-            const bytes = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk);
-            for (let offset = 0; offset < bytes.byteLength; offset += chunkSize) {
-                const piece = bytes.slice(offset, offset + chunkSize);
-                await ensureWriter().write(piece);
-            }
-        },
-        async close() {
-            if (writer) {
-                await writer.close();
-                writer = null;
-            }
-        },
-        async abort(reason) {
-            if (writer) {
-                await writer.abort(reason);
-                writer = null;
-            }
-        }
-    });
-}
 
-/**
- * 将原始 socket 的 writable 替换成分片版，返回新 socket 对象
- */
-function patchSocketWithChunkedWritable(socket, chunkSize = 1400) {
-    const chunkedWritable = createChunkedWritable(socket.writable, chunkSize);
-    return {
-        readable: socket.readable,
-        writable: chunkedWritable,
-        closed: socket.closed,
-        close: () => socket.close()
-    };
-}
 const CIPHER_SUITES_BY_ID = new Map([
 	[4865, { id: 4865, keyLen: 16, ivLen: 12, hash: "SHA-256", tls13: !0 }],
 	[4866, { id: 4866, keyLen: 32, ivLen: 12, hash: "SHA-384", tls13: !0 }],
@@ -4258,8 +4215,7 @@ async function sstpConnect(proxy, targetHost, targetPort, TCP连接) {
 			}
 		});
 
-		const chunkedWritable = createChunkedWritable(writable);
-        return { readable, writable: chunkedWritable, closed, close };
+		return { readable, writable, closed, close };
 	} catch (error) {
 		close();
 		throw error;
